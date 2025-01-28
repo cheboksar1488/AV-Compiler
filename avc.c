@@ -2,9 +2,9 @@
 #define CMPEND						1
 #define EXIT						1
 #define ERR							-1
-#define CMDCOUNT					17
+#define CMDCOUNT_MACRO				17
 #define WORDBUFF_SIZE_MACRO			10
-#define KEYBYTEMACROS				64
+#define KEYBYTE_MACRO				64
 #define NONE						0
 #define FLAGS_COUNT_MACRO			1
 #define FILENAME_BUFF_SIZE_MACRO	255
@@ -14,8 +14,8 @@
 typedef unsigned char byte;
 typedef char sbyte;
 
-const byte KEYBYTE = KEYBYTEMACROS;
-const char *KEYWORD[CMDCOUNT] = {
+const byte KEYBYTE = WORDBUFF_SIZE_MACRO;
+const char *KEYWORD[CMDCOUNT_MACRO] = {
 	"LDA",			//01 000	0
 	"LDI",			//01 001	1
 	"STR",			//01 010	2
@@ -34,7 +34,7 @@ const char *KEYWORD[CMDCOUNT] = {
 	"-",			//10 111	15
 	"RTR"			//11 RRR	16
 };
-const byte BYTE[CMDCOUNT] = {
+const byte BYTE[CMDCOUNT_MACRO] = {
 	2,		//LDA				0
 	1,		//LDI				1
 	2,		//STR				2
@@ -53,7 +53,7 @@ const byte BYTE[CMDCOUNT] = {
 	0,		//-					15
 	0		//RTR				16
 };
-const byte REG[CMDCOUNT] = {
+const byte REG[CMDCOUNT_MACRO] = {
 	1,		//LDA				0
 	1,		//LDI				1
 	1,		//STR				2
@@ -135,7 +135,7 @@ byte compile(FILE *basefile, FILE *outputfile) {
 			}
 			if ((charflow == ' ' || charflow == '\n' || charflow == EOF) && currcode == NONE) {
 				wordbuff[wordbuffptr] = '\0';
-				sbyte keyindex = get_index(wordbuff, KEYWORD, CMDCOUNT);
+				sbyte keyindex = get_index(wordbuff, KEYWORD, CMDCOUNT_MACRO);
 				if (keyindex == ERR) { printf("Syntax error.\nBUFFER:\n"); showbuff(wordbuff, WORDBUFF_SIZE_MACRO); return EXIT; }
 				currcode = KEYBYTE + (byte)(8 * keyindex);
 				reg = REG[keyindex];
@@ -279,7 +279,9 @@ sbyte cmd_parser(const int argc, const char *argv[], const char **flags, const c
 					clearbuff(filename_output_buffer, FILENAME_BUFF_SIZE_MACRO);
 					strcopy(filename_output_buffer, argv[i + 1]);
 					strcut(filename_output_buffer, extensions[1]);
+					continue;
 				}
+				i++;
 				continue;
 			default:
 				break;
