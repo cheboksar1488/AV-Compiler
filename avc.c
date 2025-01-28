@@ -1,16 +1,19 @@
-﻿#include <stdio.h>
+#include <stdio.h>
 #define CMPEND					1
 #define EXIT					1
 #define ERR						-1
 #define CMDCOUNT				17
-#define BUFFSIZEMACROS			10
+#define WORDBUFF_SIZE_MACRO		10
 #define KEYBYTEMACROS			64
 #define NONE					0
+#define FLAGS_COUNT_MACRO		1
+#define FILENAME_BUFF_SIZE		255
+#define DEBUG(arg) (printf("%d\n", arg))
+#define DEBUG_CODE 0
 
 typedef unsigned char byte;
 typedef char sbyte;
 
-const byte BUFFSIZE = BUFFSIZEMACROS;
 const byte KEYBYTE = KEYBYTEMACROS;
 const char *KEYWORD[CMDCOUNT] = {
 	"LDA",			//01 000	0
@@ -69,9 +72,9 @@ const byte REG[CMDCOUNT] = {
 	0,		//-					15
 	2,		//RTR				16
 };
-byte pow(const byte _BASE, const byte _LVL) {
+byte pow(const byte _BASE, const byte _EXP) {
 	byte result = 1	;
-	for (byte i = NONE; i < _LVL; i++) {
+	for (byte i = NONE; i < _EXP; i++) {
 		result *= _BASE;
 	}
 	return result;
@@ -81,34 +84,34 @@ byte getlenstr(const char *_MASSIVE) {
 	for (result = NONE; _MASSIVE[result] != '\0'; result++) {}
 	return result;
 }
-void showbuff(const char *_MASSIVE) {
-	for (byte i = NONE; i < BUFFSIZE; i++) {
+void showbuff(const char *_MASSIVE, const int BUFFERSIZE) {
+	for (byte i = NONE; i < BUFFERSIZE; i++) {
 		printf("| %c ", _MASSIVE[i]);
 	}
 	printf("\n");
 }
-void clearbuff(char *_MASSIVE) {
-	for (byte i = NONE; i < BUFFSIZE; i++) {
-		_MASSIVE[i] = '\0';
+void clearbuff(char *_BUFFER, const int BUFFERSIZE) {
+	for (byte i = NONE; i < BUFFERSIZE; i++) {
+		_BUFFER[i] = '\0';
 	}
 }
-byte keywordindex(const char* _WORDBUFFMASSIVE) {
-	for (byte i = NONE; i < CMDCOUNT; i++) {
-		byte keylen = getlenstr(KEYWORD[i]);
+sbyte get_index(const char *_wordbuff_massive, const char **_base, const byte _basesize) {
+	for (byte i = NONE; i < _basesize; i++) {
+		byte baselen = getlenstr(_base[i]);
 		byte j = NONE;
-		for (j = NONE; j < keylen; j++) {
-			if (_WORDBUFFMASSIVE[j] != KEYWORD[i][j]) {
+		for (j; j < baselen; j++) {
+			if (_wordbuff_massive[j] != _base[i][j]) {
 				break;
 			}
 		}
-		if (j == keylen) {
-			return (int)i;
+		if (j == baselen) {
+			return i;
 		}
 	}
 	return ERR;
 }
 byte compile(FILE *basefile, FILE *outputfile) {
-	char wordbuff[10] = "";
+	char wordbuff[WORDBUFF_SIZE_MACRO] = "";
 	char charflow;
 	sbyte wordbuffptr = NONE;
 	byte currcode = NONE;
@@ -118,27 +121,28 @@ byte compile(FILE *basefile, FILE *outputfile) {
 
 	while ((charflow = getc(basefile)) != EOF) {
 		if (charflow == ';') {
-			showbuff(wordbuff);
+			showbuff(wordbuff, WORDBUFF_SIZE_MACRO);
 			return CMPEND;
 		}
 		if (step == 0) {
 			if (currcode == NONE && (charflow != ' ' && charflow != '\n' && charflow != EOF)) {
 				wordbuff[wordbuffptr] = charflow;
+#if DEBUG_CODE==1
+				showbuff(wordbuff, WORDBUFF_SIZE_MACRO);
+#endif
 				wordbuffptr++;
-				showbuff(wordbuff);
 				continue;
 			}
 			if ((charflow == ' ' || charflow == '\n' || charflow == EOF) && currcode == NONE) {
 				wordbuff[wordbuffptr] = '\0';
-				int keyindex = keywordindex(wordbuff);
-				if (keyindex == ERR) { printf("Syntax error.\nBUFFER:\n"); showbuff(wordbuff); return ERR; }
+				sbyte keyindex = get_index(wordbuff, KEYWORD, CMDCOUNT);
+				if (keyindex == ERR) { printf("Syntax error.\nBUFFER:\n"); showbuff(wordbuff, WORDBUFF_SIZE_MACRO); return EXIT; }
 				currcode = KEYBYTE + (byte)(8 * keyindex);
 				reg = REG[keyindex];
 				bytec = BYTE[keyindex];
-				clearbuff(wordbuff);
 				if (reg == NONE && bytec == NONE && currcode != NONE) {
 					fprintf(outputfile, "%d\n", currcode);
-					clearbuff(wordbuff);
+					clearbuff(wordbuff, WORDBUFF_SIZE_MACRO);
 					wordbuffptr = NONE;
 					reg = NONE;
 					bytec = NONE;
@@ -165,7 +169,7 @@ byte compile(FILE *basefile, FILE *outputfile) {
 			}
 			if (reg == NONE && currcode != NONE && bytec == NONE) {
 				fprintf(outputfile, "%d\n", currcode);
-				clearbuff(wordbuff);
+				clearbuff(wordbuff, WORDBUFF_SIZE_MACRO);
 				wordbuffptr = NONE;
 				reg = NONE;
 				bytec = NONE;
@@ -187,7 +191,7 @@ byte compile(FILE *basefile, FILE *outputfile) {
 				bytec--;
 				if (bytec == NONE) {
 					fprintf(outputfile, "\n");
-					clearbuff(wordbuff);
+					clearbuff(wordbuff, WORDBUFF_SIZE_MACRO);
 					wordbuffptr = NONE;
 					reg = NONE;
 					bytec = NONE;
@@ -203,17 +207,106 @@ byte compile(FILE *basefile, FILE *outputfile) {
 	}
 	return CMPEND;
 }
-int main(int argc, char *argv[]) {
-	if (!argv[1]) {
-		printf("No input file name.\n");
+byte extensionchecker(char *argv, char *extension) {
+	byte extlen = getlenstr(extension);
+	byte argvlen = getlenstr(argv);
+	if (extlen >= argvlen) {
+		return 0;
+	}
+	byte match = 0;
+	for (byte i = 0; i < extlen; i++) {
+		if (argv[argvlen - extlen + i] != extension[i]) {
+			match = 0;
+			break;
+		}
+		match++;
+	}
+	return match == extlen ? 1:0;
+}
+void strcopy(char *acceptor, const char *donor) {
+	byte i = 0;
+	for (i; i < getlenstr(donor); i++) {
+		acceptor[i] = donor[i];
+	}
+	acceptor[i] = '\0';
+}
+void copyname(char *acceptor, const char *donor) {
+	byte i = 0;
+	for (i; i < getlenstr(donor); i++) {
+		if (donor[i] == '.') {
+			break;
+		}
+		acceptor[i] = donor[i];
+	}
+	acceptor[i] = '\0';
+}
+void strcut(char *base, const char *arg) {
+	byte baselen = getlenstr(base);
+	byte arglen = getlenstr(arg);
+	for (byte i = 0; i < arglen; i++) {
+		base[baselen + i] = arg[i];
+	}
+	base[baselen + arglen] = '\0';
+}
+sbyte cmd_parser(const int argc, const char *argv[], const char **flags, const char **extensions, char *filename_input_buffer, char *filename_output_buffer) {
+	if (argc < 2) {
+		printf("No input filename.\n");
+		return ERR;	
+	}
+	if (!extensionchecker(argv[1], extensions[0])) {
+		strcopy(filename_input_buffer, argv[1]);
+		strcut(filename_input_buffer, extensions[0]);
+	}
+	else {
+		strcopy(filename_input_buffer, argv[1]);
+	}
+	for (byte i = 2; i < argc; i++) {
+		if (argv[i][0] == '-') {
+			switch (get_index(argv[i], flags, FLAGS_COUNT_MACRO))
+			{
+			case -1:
+				printf("Unknow flag.\n");
+				continue;
+			case 0:
+				if ((i+1)>=argc) {
+					printf("No input filename output.\n");
+					clearbuff(filename_output_buffer, FILENAME_BUFF_SIZE);
+					copyname(filename_output_buffer, argv[1]);
+					strcut(filename_output_buffer, extensions[1]);
+					continue;
+				}
+				if (!extensionchecker(argv[i+1], extensions[1])) {
+					clearbuff(filename_output_buffer, FILENAME_BUFF_SIZE);
+					strcopy(filename_output_buffer, argv[i + 1]);
+					strcut(filename_output_buffer, extensions[1]);
+				}
+				continue;
+			default:
+				break;
+			}
+		}
+	}
+	return EXIT;
+}
+int main(int argc, char **argv) {
+	char filename_input_buffer[FILENAME_BUFF_SIZE] = "";
+	char filename_output_buffer[FILENAME_BUFF_SIZE] = "o.byte";
+	const char *extensions[] = {
+		".avm",
+		".byte"
+	};
+	const char* flags[FLAGS_COUNT_MACRO] = {
+		"-o"
+	};
+	if (cmd_parser(argc, argv, flags, extensions, filename_input_buffer, filename_output_buffer) == ERR) {
 		return EXIT;
 	}
 	FILE *file, *outputfile;
-	fopen_s(&file, argv[1], "r");
-	fopen_s(&outputfile, "o.byte", "w");
+	fopen_s(&file, filename_input_buffer, "r");
+	fopen_s(&outputfile, filename_output_buffer, "w");
 	if (file == NULL || outputfile == NULL) {
-		if (file) fclose(file);
-		if (outputfile) fclose(outputfile);
+		if (file) { printf("file"); fclose(file); };
+		if (outputfile) { printf("outputfile\n"); fclose(outputfile); };
 		printf("File open error.\n");
 		return EXIT;
 	}
