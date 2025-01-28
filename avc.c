@@ -1,13 +1,13 @@
 #include <stdio.h>
-#define CMPEND					1
-#define EXIT					1
-#define ERR						-1
-#define CMDCOUNT				17
-#define WORDBUFF_SIZE_MACRO		10
-#define KEYBYTEMACROS			64
-#define NONE					0
-#define FLAGS_COUNT_MACRO		1
-#define FILENAME_BUFF_SIZE		255
+#define CMPEND						1
+#define EXIT						1
+#define ERR							-1
+#define CMDCOUNT					17
+#define WORDBUFF_SIZE_MACRO			10
+#define KEYBYTEMACROS				64
+#define NONE						0
+#define FLAGS_COUNT_MACRO			1
+#define FILENAME_BUFF_SIZE_MACRO	255
 #define DEBUG(arg) (printf("%d\n", arg))
 #define DEBUG_CODE 0
 
@@ -270,13 +270,13 @@ sbyte cmd_parser(const int argc, const char *argv[], const char **flags, const c
 			case 0:
 				if ((i+1)>=argc) {
 					printf("No input filename output.\n");
-					clearbuff(filename_output_buffer, FILENAME_BUFF_SIZE);
+					clearbuff(filename_output_buffer, FILENAME_BUFF_SIZE_MACRO);
 					copyname(filename_output_buffer, argv[1]);
 					strcut(filename_output_buffer, extensions[1]);
 					continue;
 				}
 				if (!extensionchecker(argv[i+1], extensions[1])) {
-					clearbuff(filename_output_buffer, FILENAME_BUFF_SIZE);
+					clearbuff(filename_output_buffer, FILENAME_BUFF_SIZE_MACRO);
 					strcopy(filename_output_buffer, argv[i + 1]);
 					strcut(filename_output_buffer, extensions[1]);
 				}
@@ -289,8 +289,8 @@ sbyte cmd_parser(const int argc, const char *argv[], const char **flags, const c
 	return EXIT;
 }
 int main(int argc, char **argv) {
-	char filename_input_buffer[FILENAME_BUFF_SIZE] = "";
-	char filename_output_buffer[FILENAME_BUFF_SIZE] = "o.byte";
+	char filename_input_buffer[FILENAME_BUFF_SIZE_MACRO] = "";
+	char filename_output_buffer[FILENAME_BUFF_SIZE_MACRO] = "o.byte";
 	const char *extensions[] = {
 		".avm",
 		".byte"
