@@ -9,7 +9,7 @@
 #define FLAGS_COUNT_MACRO			1
 #define FILENAME_BUFF_SIZE_MACRO	255
 #define DEBUG(arg) (printf("%d\n", arg))
-#define DEBUG_CODE 0
+#define DEBUG_CODE 1
 
 typedef unsigned char byte;
 typedef char sbyte;
@@ -31,7 +31,7 @@ const char *KEYWORD[CMDCOUNT_MACRO] = {
 	"ACI",			//10 100	12
 	"ACO",			//10 101	13
 	"JUMP",			//10 110	14
-	"-",			//10 111	15
+	"ADS",			//10 111	15
 	"RTR"			//11 RRR	16
 };
 const byte BYTE[CMDCOUNT_MACRO] = {
@@ -50,7 +50,7 @@ const byte BYTE[CMDCOUNT_MACRO] = {
 	0,		//ACI				12
 	0,		//ACO				13
 	2,		//JMP				14
-	0,		//-					15
+	0,		//ADS				15
 	0		//RTR				16
 };
 const byte REG[CMDCOUNT_MACRO] = {
@@ -69,7 +69,7 @@ const byte REG[CMDCOUNT_MACRO] = {
 	1,		//ACI				12
 	1,		//ACO				13
 	0,		//JMP				14
-	0,		//-					15
+	0,		//ADS				15
 	2,		//RTR				16
 };
 byte pow(const byte _BASE, const byte _EXP) {
@@ -137,7 +137,8 @@ byte compile(FILE *basefile, FILE *outputfile) {
 				wordbuff[wordbuffptr] = '\0';
 				sbyte keyindex = get_index(wordbuff, KEYWORD, CMDCOUNT_MACRO);
 				if (keyindex == ERR) { printf("Syntax error.\nBUFFER:\n"); showbuff(wordbuff, WORDBUFF_SIZE_MACRO); return EXIT; }
-				currcode = KEYBYTE + (byte)(8 * keyindex);
+				currcode = KEYBYTE_MACRO + (byte)(8 * keyindex);
+				printf("currcode: %d; keyindex: %d\n", currcode, keyindex);
 				reg = REG[keyindex];
 				bytec = BYTE[keyindex];
 				if (reg == NONE && bytec == NONE && currcode != NONE) {
@@ -264,9 +265,6 @@ sbyte cmd_parser(const int argc, const char *argv[], const char **flags, const c
 		if (argv[i][0] == '-') {
 			switch (get_index(argv[i], flags, FLAGS_COUNT_MACRO))
 			{
-			case -1:
-				printf("Unknow flag.\n");
-				continue;
 			case 0:
 				if ((i+1)>=argc) {
 					printf("No input filename output.\n");
@@ -284,6 +282,7 @@ sbyte cmd_parser(const int argc, const char *argv[], const char **flags, const c
 				i++;
 				continue;
 			default:
+				printf("Unknow flag.\n");
 				break;
 			}
 		}
